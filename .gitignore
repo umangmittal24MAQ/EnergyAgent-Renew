@@ -1,0 +1,15 @@
+# Python cache artifacts
+**/__pycache__/
+**/*.py[cod]
+
+# Local virtual environments
+.venv/
+backend/api-venv/
+backend/energy-dashboard/venv/
+
+# Generated backend email/debug outputs
+backend/energy-dashboard/output/*.html
+backend/energy-dashboard/output/*.txt
+backend/energy-dashboard/output/_debug_scheduler_email.html
+backend/energy-dashboard/output/test_email.html
+backend/energy-dashboard/output/scheduler_module_debug.txt

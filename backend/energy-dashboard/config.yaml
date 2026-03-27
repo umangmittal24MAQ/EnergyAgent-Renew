@@ -1,0 +1,30 @@
+data:
+  grid_file: https://docs.google.com/spreadsheets/d/15B_YvZIM_ia_ZhtxwP9YB9hMZpKmwrut7JCBYSVIT-8/edit?usp=sharing
+  solar_file: https://docs.google.com/spreadsheets/d/1ST7frQgyKgsvoyZI4y5tYqrJ5Ffi8p-XUgpkplAGM-Y/edit?usp=sharing
+  solar_smb_status_file: https://docs.google.com/spreadsheets/d/1h4zRMTtiV0TUgnRyiIuWKrWeFnHtZQjhyh4vJtXSeG4/edit?usp=sharing
+  solar_last7_file: https://docs.google.com/spreadsheets/d/1C7ugryQ-ZdT4p_DwmkUt1XOa14rPthAZIXLlkB2TDmQ/edit?usp=sharing
+
+costs:
+  grid_per_unit_inr: 7.11
+  diesel_per_unit_inr: 30.0
+  solar_per_unit_inr: 0.0
+
+solar:
+  daily_target_kwh: 3000
+  inverter_ids: [SMB1, SMB2, SMB3, SMB4, SMB5]
+
+email:
+  subject: "Daily Energy Report — Noida Campus — {date}"
+  default_to: "ishaa.1518@gmail.com"
+  default_cc: ""
+  default_from: "krishnofc@gmail.com"
+  send_time_ist: "10:00"
+
+output:
+  directory: ./output
+  log_file: ./output/scheduler_log.json
+
+app:
+  title: "Energy Consumption Dashboard — Noida Campus"
+  version: "1.0"
+  page_icon: "⚡"
