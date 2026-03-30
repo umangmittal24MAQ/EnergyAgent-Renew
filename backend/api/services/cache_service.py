@@ -18,6 +18,20 @@ CACHE_DB_PATH = Path(__file__).parent.parent.parent / "energy-dashboard" / "outp
 CACHE_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
+def _convert_timestamps_to_strings(obj: Any) -> Any:
+    """
+    Recursively convert Pandas Timestamp objects to ISO strings for JSON serialization
+    """
+    if isinstance(obj, pd.Timestamp):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {k: _convert_timestamps_to_strings(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [_convert_timestamps_to_strings(item) for item in obj]
+    else:
+        return obj
+
+
 class CacheService:
     """In-memory cache with SQLite persistence and TTL support"""
     
@@ -144,11 +158,9 @@ class CacheService:
             conn = sqlite3.connect(str(db_file), timeout=5, check_same_thread=False)
             cursor = conn.cursor()
             
-            # Convert value to JSON string
-            if isinstance(value, list) and value and isinstance(value[0], dict):
-                json_value = json.dumps(value)
-            else:
-                json_value = json.dumps(value)
+            # Convert Pandas Timestamps to strings for JSON serialization
+            json_safe_value = _convert_timestamps_to_strings(value)
+            json_value = json.dumps(json_safe_value)
             
             cursor.execute('''
                 INSERT OR REPLACE INTO cache_entries (key, value, ttl_seconds, timestamp)

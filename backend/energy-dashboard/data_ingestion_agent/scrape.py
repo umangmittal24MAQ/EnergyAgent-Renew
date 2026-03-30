@@ -2,6 +2,7 @@ from playwright.sync_api import sync_playwright
 import json
 import os
 import sys
+from datetime import datetime
 
 # Fix Unicode encoding on Windows
 if sys.stdout.encoding != 'utf-8':
@@ -47,6 +48,9 @@ try:
         # Attach listener BEFORE navigation
         page.on("response", capture_api)
 
+        today = datetime.now().strftime("%Y-%m-%d")
+        print(f"\n🗓️  Today's Date: {today}")
+        print("=" * 60)
         print("Opening site...")
         page.goto("https://cloud.suryalog.com")
 
@@ -67,17 +71,114 @@ try:
         # Wait for page to navigate after login
         page.wait_for_timeout(8000)
 
-        print("Waiting for APIs...")
-        page.wait_for_timeout(10000)
+        # ========== ROBUST DATE NAVIGATION STRATEGY ==========
+        print("\n📅 Navigating to today's data...")
+        print(f"   Target date: {today}")
+        
+        # Strategy 1: Try JavaScript date manipulation
+        print("  [1/5] Attempting JavaScript date manipulation...")
+        try:
+            # Try to set date via JavaScript
+            page.evaluate(f"""
+                () => {{
+                    // Try to find and update all date inputs
+                    const inputs = document.querySelectorAll('input[type="date"]');
+                    inputs.forEach(input => {{
+                        input.value = '{today}';
+                        input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                        input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    }});
+                    
+                    // Try to find and click today buttons
+                    const buttons = Array.from(document.querySelectorAll('button')).filter(b => 
+                        b.textContent.toLowerCase().includes('today')
+                    );
+                    buttons.forEach(btn => btn.click());
+                }}
+            """)
+            page.wait_for_timeout(3000)
+            print("     ✓ JavaScript date operations attempted")
+        except Exception as e:
+            print(f"     ✗ JavaScript approach failed: {str(e)[:60]}")
+        
+        # Strategy 2: Try filling date inputs with multiple formats
+        print("  [2/5] Trying date input fields...")
+        try:
+            date_inputs = page.query_selector_all('input[type="date"]')
+            if date_inputs:
+                for inp in date_inputs:
+                    try:
+                        page.fill('input[type="date"]', today)
+                        page.wait_for_timeout(500)
+                        page.press('input[type="date"]', 'Enter')
+                        page.wait_for_timeout(2000)
+                        print("     ✓ Set date via input field")
+                        break
+                    except:
+                        continue
+        except Exception as e:
+            print(f"     ✗ Date input approach failed: {str(e)[:60]}")
+        
+        # Strategy 3: Try keyboard navigation (arrow keys to navigate to today)
+        print("  [3/5] Attempting keyboard navigation...")
+        try:
+            # Focus on page and use arrow keys multiple times
+            page.press('body', 'Tab')
+            page.wait_for_timeout(500)
+            for _ in range(5):
+                page.press('body', 'ArrowRight')
+                page.wait_for_timeout(300)
+            print("     ✓ Keyboard navigation attempted")
+        except Exception as e:
+            print(f"     ✗ Keyboard navigation failed: {str(e)[:60]}")
+        
+        # Strategy 4: Look for "today" related buttons/links
+        print("  [4/5] Looking for 'today' navigation elements...")
+        try:
+            # Try clicking buttons that might have "today" text
+            today_buttons = page.query_selector_all('button, a, span')
+            for elem in today_buttons:
+                try:
+                    text = page.evaluate('(el) => el.textContent || el.innerText || el.value', elem)
+                    if text and 'today' in str(text).lower():
+                        page.click(elem)
+                        page.wait_for_timeout(2000)
+                        print(f"     ✓ Clicked 'today' element")
+                        break
+                except:
+                    continue
+        except Exception as e:
+            print(f"     ✗ 'Today' button search failed: {str(e)[:60]}")
+        
+        # Strategy 5: Click multiple areas of the page to trigger data refresh for today
+        print("  [5/5] Triggering interactions to load today's data...")
+        try:
+            click_positions = [
+                (page.viewport_size["width"] // 2, 100),      # Top center
+                (page.viewport_size["width"] // 2, page.viewport_size["height"] // 2),  # Center
+                (page.viewport_size["width"] - 100, 100),    # Top right
+                (page.viewport_size["width"] // 4, page.viewport_size["height"] // 4),  # Upper left quadrant
+            ]
+            
+            for x, y in click_positions:
+                try:
+                    page.mouse.click(x, y)
+                    page.wait_for_timeout(1500)
+                except:
+                    continue
+            print("     ✓ Page interactions triggered")
+        except Exception as e:
+            print(f"     ✗ Interaction triggering failed: {str(e)[:60]}")
+        
+        print("\n✓ Date navigation strategies completed")
+        print("Waiting for all APIs to be triggered...")
+        page.wait_for_timeout(8000)
 
-        print("Triggering interaction...")
-        page.mouse.click(100, 100)
-        page.wait_for_timeout(5000)
-
-        print("Reloading...")
+        print("🔄 Reloading page to capture complete today's data...")
         page.reload()
         page.wait_for_timeout(10000)
 
+        print("✓ Scraping complete, closing browser...")
         browser.close()
         
 except Exception as e:
@@ -94,6 +195,7 @@ try:
     if captured_data:
         print(f"\n✅ Data saved successfully to {output_file}")
         print(f"   Total API calls captured: {len(captured_data)}")
+        print(f"   Expected data date: {today}")
     else:
         print(f"\n⚠️ No API data captured, but file created at {output_file}")
         print("   This may happen if login failed or APIs were not triggered")

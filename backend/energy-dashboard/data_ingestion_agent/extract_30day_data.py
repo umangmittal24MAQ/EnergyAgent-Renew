@@ -144,6 +144,7 @@ try:
         latest_available_date = available_dates[-1]
         earliest_available_date = available_dates[0]
         print(f"  ✓ Data available from {earliest_available_date} to {latest_available_date}")
+        print(f"  ℹ️  Latest data date: {latest_available_date} ({(datetime.now().date() - latest_available_date).days} days ago)")
     else:
         latest_available_date = latest_date
         earliest_available_date = latest_date

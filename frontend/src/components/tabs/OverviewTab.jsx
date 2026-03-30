@@ -33,7 +33,6 @@ import {
   Leaf,
   TrendingUp,
   ShieldCheck,
-  CircleDollarSign,
   IndianRupee,
 } from "lucide-react";
 
@@ -652,10 +651,6 @@ export const OverviewTab = () => {
     );
   }
 
-  const recentGridRows = getRecentRows(gridData?.data || [], 7);
-  const activeSolarRows = getRecentRows(solarData?.data || [], 7);
-  const recentDieselRows = getRecentRows(dieselData?.data || [], 7);
-
   // Get yesterday's date (previous day) for KPI calculations
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
@@ -663,11 +658,36 @@ export const OverviewTab = () => {
 
   const effectiveDate = yesterdayDate;
 
-  const sourceMixChartData = buildOverviewChartData(
-    recentGridRows,
-    activeSolarRows,
-    recentDieselRows,
+  // Use 30-day reportRows data (same as the chart above) for accurate source mix calculation
+  const totalGridEnergy = reportRows.reduce(
+    (sum, row) => sum + asFiniteNumber(row?.["Grid Units Consumed (kWh)"], 0),
+    0,
   );
+  const totalSolarEnergy = reportRows.reduce(
+    (sum, row) => sum + asFiniteNumber(row?.["Solar Units Consumed (kWh)"], 0),
+    0,
+  );
+  const totalDieselEnergy = reportRows.reduce(
+    (sum, row) => sum + asFiniteNumber(row?.["Diesel Consumed (Litres)"], 0),
+    0,
+  );
+  const combinedEnergyTotal = totalGridEnergy + totalSolarEnergy + totalDieselEnergy;
+
+  // Build sourceMixData from 30-day totals for accurate percentages
+  const sourceMixData = [
+    {
+      name: "Grid",
+      value: combinedEnergyTotal ? (totalGridEnergy / combinedEnergyTotal) * 100 : 0,
+    },
+    {
+      name: "Solar",
+      value: combinedEnergyTotal ? (totalSolarEnergy / combinedEnergyTotal) * 100 : 0,
+    },
+    {
+      name: "Diesel",
+      value: combinedEnergyTotal ? (totalDieselEnergy / combinedEnergyTotal) * 100 : 0,
+    },
+  ];
   const trendChartData = buildOverviewTrendChartData(reportRows);
   const yesterdayRecord =
     reportRows.find((row) => row.__dateKey === reportEndDateKey) ||
@@ -700,35 +720,6 @@ export const OverviewTab = () => {
       ? (latestSolarEnergyGenerated / latestTotalEnergyConsumed) * 100
       : 0;
 
-  const totalGrid = sourceMixChartData.reduce(
-    (sum, row) => sum + row["Grid Energy Consumed (kWh)"],
-    0,
-  );
-  const totalSolar = sourceMixChartData.reduce(
-    (sum, row) => sum + row["Solar Energy Generated (kWh)"],
-    0,
-  );
-  const totalDiesel = sourceMixChartData.reduce(
-    (sum, row) => sum + row["Diesel Generator Energy Consumed (kWh)"],
-    0,
-  );
-  const combinedTotal = totalGrid + totalSolar + totalDiesel;
-
-  const sourceMixData = [
-    {
-      name: "Grid",
-      value: combinedTotal ? (totalGrid / combinedTotal) * 100 : 0,
-    },
-    {
-      name: "Solar",
-      value: combinedTotal ? (totalSolar / combinedTotal) * 100 : 0,
-    },
-    {
-      name: "Diesel",
-      value: combinedTotal ? (totalDiesel / combinedTotal) * 100 : 0,
-    },
-  ];
-
   const insightCards = [
     {
       title: "Best Source Mix",
@@ -739,7 +730,7 @@ export const OverviewTab = () => {
     {
       title: "Cost Exposure",
       text: `Diesel share is ${(sourceMixData[2]?.value || 0).toFixed(1)}%. Lowering it improves margin resilience.`,
-      icon: CircleDollarSign,
+      icon: IndianRupee,
       accent: "text-[#3f6894]",
     },
   ];
@@ -795,7 +786,7 @@ export const OverviewTab = () => {
             title="Cost Savings from Solar"
             displayValue={formatRupeeValue(latestEstimatedSavings)}
             color="green"
-            icon={CircleDollarSign}
+            icon={IndianRupee}
           />
         </div>
       </div>

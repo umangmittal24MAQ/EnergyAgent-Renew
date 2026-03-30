@@ -410,13 +410,23 @@ class GoogleSheetsDataService:
             return None
     
     def get_smb_status_data(self) -> Optional[pd.DataFrame]:
-        """Fetch and process SMB status data with timestamp handling"""
-        df = self.fetch_sheet_data("smb_status")
+        """Fetch SMB status data from UnifiedSolarData sheet (status columns only)"""
+        df = self.fetch_sheet_data("unified_solar")
         if df is None or df.empty:
             return None
         
         try:
-            config = SHEETS_CONFIG.get("smb_status", {})
+            config = SHEETS_CONFIG.get("unified_solar", {})
+            
+            # Select only Date, Time, and status columns (SMB1_status, SMB2_status, etc.)
+            status_columns = [col for col in df.columns if col.endswith('_status')]
+            required_columns = ['Date', 'Time'] + status_columns
+            available_columns = [col for col in required_columns if col in df.columns]
+            
+            if not available_columns:
+                return None
+            
+            df = df[available_columns].copy()
             
             # Normalize date column
             if 'Date' in df.columns:
@@ -425,20 +435,14 @@ class GoogleSheetsDataService:
             # Ensure Timestamp column
             df = self._ensure_timestamp_column(df, config)
             
-            # Convert numeric columns for SMB power data
-            numeric_cols = config.get('numeric_columns', [])
-            for col in numeric_cols:
-                if col in df.columns:
-                    df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-            
             # Sort by timestamp (newest first)
             if 'Timestamp' in df.columns:
                 df = df.sort_values('Timestamp', ascending=False)
             
-            logger.info(f"Processed SMB status data: {len(df)} rows with timestamps")
+            logger.info(f"Processed SMB status data from UnifiedSolarData: {len(df)} rows with timestamps")
             return df
         except Exception as e:
-            logger.error(f"Failed to process SMB status data: {e}")
+            logger.error(f"Failed to process SMB status data from UnifiedSolarData: {e}")
             return None
 
     def get_grid_and_diesel_data(self) -> Optional[pd.DataFrame]:

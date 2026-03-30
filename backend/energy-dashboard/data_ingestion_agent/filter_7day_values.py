@@ -29,6 +29,11 @@ today = datetime.now().date()
 window_start = today - timedelta(days=8)
 window_end = today - timedelta(days=1)
 
+# Log the date range being processed
+print(f"\n📅 Today's Date: {today}")
+print(f"📅 Processing Window: {window_start} to {window_end}")
+print(f"   (Last 7 complete days, excluding today)")
+
 # Build all dates in the target window (newest first), so missing days are still shown.
 window_dates = [
     (window_end - timedelta(days=offset)).isoformat()

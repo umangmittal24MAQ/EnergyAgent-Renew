@@ -153,7 +153,7 @@ class GoogleSheetsWriter:
             print(f"   [WARN] Could not get last row: {str(e)}")
             return 0
     
-    def write_unified_solar_data(self, sheet_id: str, data: Dict[str, Any]):
+    def write_unified_solar_data(self, sheet_id: str, data: Dict[str, Any], smb_data: List[Dict[str, Any]] = None):
         """Append unified solar data to Google Sheets"""
         try:
             tab_name = SHEETS_CONFIG["unified_solar"]["tab_name"]
@@ -167,7 +167,12 @@ class GoogleSheetsWriter:
                 "V1 (V)", "V2 (V)", "V3 (V)", 
                 "Day Generation (kWh)", "Day Import (kWh)", "Day Export (kWh)", 
                 "Total Import (kWh)", "Total Export (kWh)",
-                "DC Capacity (kWp)", "AC Capacity (kW)"
+                "DC Capacity (kWp)", "AC Capacity (kW)",
+                "Inverter1", "Inverter1_status", "Inverter2", "Inverter2_status", 
+                "Inverter3", "Inverter3_status", "Inverter4", "Inverter4_status", 
+                "Inverter5", "Inverter5_status",
+                "SMB1 (kW)", "SMB1 Status", "SMB2 (kW)", "SMB2 Status", "SMB3 (kW)", "SMB3 Status",
+                "SMB4 (kW)", "SMB4 Status", "SMB5 (kW)", "SMB5 Status"
             ]
             
             # Extract data from the unified data
@@ -211,6 +216,43 @@ class GoogleSheetsWriter:
                 plant_capacity.get("DC_Capacity_kWp", ""),
                 plant_capacity.get("AC_Capacity_kW", "")
             ]
+            
+            # Add Inverter data if available
+            inverter_details = data.get("inverter_details", [])
+            
+            # Ensure we have entries for all 5 inverters (or display empty)
+            for inv_num in range(1, 6):
+                if inv_num <= len(inverter_details):
+                    inv = inverter_details[inv_num - 1]
+                    ac_power_kw = inv.get("AC_Power_kW", "")
+                    status = inv.get("Status", "")
+                    row.append(ac_power_kw)      # Inverter power in kW
+                    row.append(status)           # Inverter status (ON/OFF)
+                    print(f"   [OK] Added Inverter{inv_num}: {ac_power_kw} kW, Status: {status}")
+                else:
+                    row.append("")               # Empty power
+                    row.append("")               # Empty status
+            
+            # Add SMB status data if provided
+            if smb_data and len(smb_data) > 0:
+                base_row = smb_data[0]
+                smb_names = ["SMB1", "SMB2", "SMB3", "SMB4", "SMB5"]
+                
+                for smb_name in smb_names:
+                    power_kw = base_row.get(f"{smb_name} (kW)", "")
+                    status = base_row.get(f"{smb_name} Status", "")
+                    
+                    # Format power value
+                    power_value = f"{float(power_kw):.2f}" if power_kw else ""
+                    status_value = status if status else ""
+                    
+                    row.append(power_value)      # SMB power in kW
+                    row.append(status_value)     # SMB status (ON/OFF)
+            else:
+                # Add empty SMB columns if no SMB data provided
+                for _ in range(5):
+                    row.append("")
+                    row.append("")
             
             # Get the last row to determine where to append
             last_row = self.get_last_row(sheet_id, tab_name)
@@ -296,12 +338,48 @@ class GoogleSheetsWriter:
                 all_rows = [headers] + data_rows
                 body = {'values': all_rows}
                 range_to_write = f"{tab_name}!A1"
-                print(f"   [OK] Sheet empty, adding headers and data")
+                print(f"   [OK] Sheet empty, adding headers and data ({len(data_rows)} rows)")
             else:
-                # Append only data rows (skip headers)
-                body = {'values': data_rows}
-                range_to_write = f"{tab_name}!A{last_row + 1}"
-                print(f"   [OK] Appending to row {last_row + 1}")
+                # Sheet has data - check for existing dates and filter out duplicates
+                print(f"   [INFO] Checking for existing dates in sheet...")
+                
+                try:
+                    # Get all existing dates from column A (starting from row 2, skipping header)
+                    existing_values = self.sheet_service.spreadsheets().values().get(
+                        spreadsheetId=sheet_id,
+                        range=f"{tab_name}!A2:A"
+                    ).execute()
+                    
+                    existing_dates = set()
+                    if 'values' in existing_values:
+                        existing_dates = set([row[0] for row in existing_values['values'] if row])
+                    
+                    print(f"   [INFO] Found {len(existing_dates)} existing dates in sheet")
+                    
+                    # Filter data_rows to only include new dates
+                    new_data_rows = []
+                    for row in data_rows:
+                        date_value = row[0]  # Date is in first column
+                        if date_value not in existing_dates:
+                            new_data_rows.append(row)
+                            print(f"   [OK] Date {date_value} is new - will append")
+                        else:
+                            print(f"   [SKIP] Date {date_value} already exists in sheet - skipping")
+                    
+                    if len(new_data_rows) == 0:
+                        print(f"   [INFO] All dates already present in sheet - no new data to append")
+                        return True
+                    
+                    # Append only new data rows (skip headers)
+                    body = {'values': new_data_rows}
+                    range_to_write = f"{tab_name}!A{last_row + 1}"
+                    print(f"   [OK] Appending {len(new_data_rows)} new rows starting at row {last_row + 1}")
+                    
+                except Exception as e:
+                    print(f"   [WARN] Error reading existing dates: {str(e)}")
+                    print(f"   [INFO] Proceeding to append all rows without date comparison")
+                    body = {'values': data_rows}
+                    range_to_write = f"{tab_name}!A{last_row + 1}"
             
             self.sheet_service.spreadsheets().values().update(
                 spreadsheetId=sheet_id,
@@ -310,7 +388,10 @@ class GoogleSheetsWriter:
                 body=body
             ).execute()
             
-            print(f"   [OK] Written last 7 days data ({len(data_rows)} rows appended)")
+            if last_row > 0:
+                print(f"   [OK] Written last 7 days data ({len(new_data_rows) if 'new_data_rows' in locals() else len(data_rows)} new row(s) appended)")
+            else:
+                print(f"   [OK] Written last 7 days data ({len(data_rows)} rows appended)")
             return True
         except Exception as e:
             print(f"   [ERROR] Error writing last 7 days data: {str(e)}")
@@ -466,9 +547,25 @@ class GoogleSheetsWriter:
             if data_file.exists():
                 with open(data_file, 'r') as f:
                     data = json.load(f)
+                    dashboard_info = data.get("dashboard_info", {})
+                    timestamp = dashboard_info.get("last_update", "N/A")
+                    print(f"   📅 Data timestamp: {timestamp}")
+                    
+                    # Load SMB data to append to unified solar data
+                    smb_data = None
+                    smb_file = script_dir / SHEETS_CONFIG["smb_status"]["data_file"]
+                    if smb_file.exists():
+                        try:
+                            with open(smb_file, 'r') as smb_f:
+                                smb_data = json.load(smb_f)
+                                print(f"   📊 Including SMB status data")
+                        except:
+                            print(f"   [WARN] Could not load SMB data")
+                    
                     success = self.write_unified_solar_data(
                         SHEETS_CONFIG["unified_solar"]["sheet_id"],
-                        data
+                        data,
+                        smb_data
                     )
                     all_success = all_success and success
             else:
@@ -485,46 +582,12 @@ class GoogleSheetsWriter:
             if data_file.exists():
                 with open(data_file, 'r') as f:
                     data = json.load(f)
+                    extraction_info = data.get("extraction_info", {})
+                    window_start = extraction_info.get("window_start", "N/A")
+                    window_end = extraction_info.get("window_end", "N/A")
+                    print(f"   📅 Data window: {window_start} to {window_end}")
                     success = self.write_last_7_days_data(
                         SHEETS_CONFIG["last_7_days"]["sheet_id"],
-                        data
-                    )
-                    all_success = all_success and success
-            else:
-                print(f"   [WARN] Data file not found: {data_file}")
-                all_success = False
-        except Exception as e:
-            print(f"   [ERROR] Error: {str(e)}")
-            all_success = False
-        
-        # Write SMB Status Data
-        print("\n[3] SMB_Status Sheet:")
-        try:
-            data_file = script_dir / SHEETS_CONFIG["smb_status"]["data_file"]
-            if data_file.exists():
-                with open(data_file, 'r') as f:
-                    data = json.load(f)
-                    success = self.write_smb_status_data(
-                        SHEETS_CONFIG["smb_status"]["sheet_id"],
-                        data
-                    )
-                    all_success = all_success and success
-            else:
-                print(f"   [WARN] Data file not found: {data_file}")
-                all_success = False
-        except Exception as e:
-            print(f"   [ERROR] Error: {str(e)}")
-            all_success = False
-
-        # Write Grid & Diesel Data
-        print("\n[4] grid_and_diesel Sheet:")
-        try:
-            data_file = script_dir / SHEETS_CONFIG["grid_and_diesel"]["data_file"]
-            if data_file.exists():
-                with open(data_file, 'r') as f:
-                    data = json.load(f)
-                    success = self.write_grid_and_diesel_data(
-                        SHEETS_CONFIG["grid_and_diesel"]["sheet_id"],
                         data
                     )
                     all_success = all_success and success

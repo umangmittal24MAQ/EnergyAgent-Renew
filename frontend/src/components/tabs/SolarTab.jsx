@@ -22,7 +22,7 @@ import {
 import { useDateStore } from "../../store/dateStore";
 import {
   Sun,
-  DollarSign,
+  IndianRupee,
   Zap,
   AlertCircle,
   CheckCircle2,
@@ -264,7 +264,7 @@ export const SolarTab = () => {
             value={latestEstimatedSavings}
             unit="INR"
             color="green"
-            icon={DollarSign}
+            icon={IndianRupee}
           />
           <KPICard
             title="Inverter Fault Count"

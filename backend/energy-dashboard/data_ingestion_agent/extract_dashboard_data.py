@@ -83,25 +83,39 @@ try:
         total_ac_w = 0
         inverter_details = []
         
-        for inv_id, inv_data in last_log['inverter'].items():
+        # Sort inverter IDs to ensure consistent numbering (Inverter1, Inverter2, etc.)
+        sorted_inv_ids = sorted(last_log['inverter'].keys())
+        
+        for idx, inv_id in enumerate(sorted_inv_ids, 1):
+            inv_data = last_log['inverter'][inv_id]
             if isinstance(inv_data, dict):
+                ac_power_w = inv_data.get('WT', 0)
+                # Determine status: ON if AC_Power > 0, OFF if 0 or negative
+                status = "ON" if ac_power_w > 0 else "OFF"
+                
                 inv_detail = {
+                    "number": idx,
                     "id": inv_id,
                     "DC_V": inv_data.get('DC_V', 0),
                     "DC_I": inv_data.get('DC_I', 0),
                     "DC_W": inv_data.get('DC_W', 0),
                     "AC_Voltage": inv_data.get('VT', 0),
                     "AC_Current": inv_data.get('IT', 0),
-                    "AC_Power": inv_data.get('WT', 0),
+                    "AC_Power": ac_power_w,
+                    "AC_Power_kW": round(ac_power_w / 1000, 2),
                     "PF": inv_data.get('PFT', 0),
-                    "Frequency": inv_data.get('FREQ', 0)
+                    "Frequency": inv_data.get('FREQ', 0),
+                    "Status": status
                 }
                 inverter_details.append(inv_detail)
                 total_dc_w += inv_data.get('DC_W', 0)
-                total_ac_w += inv_data.get('WT', 0)
+                total_ac_w += ac_power_w
         
         dashboard_data['power_data']['DC_Power_kW'] = round(total_dc_w / 1000, 2)
         dashboard_data['power_data']['AC_Power_kW'] = round(total_ac_w / 1000, 2)
+        
+        # Store inverter details for sheet writing
+        dashboard_data['inverter_details'] = inverter_details
     
     # Meter data - get primary meter (SOLAR_METER or first online meter)
     if 'meter' in last_log:

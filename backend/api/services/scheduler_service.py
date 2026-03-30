@@ -262,10 +262,11 @@ def _extract_record_date_key(row: Dict[str, Any]) -> str:
 
 def check_master_data_today_flag() -> Dict[str, Any]:
     """
-    Step 1 (flag-based): scan master-data/master-grid rows and set FOUND for today's date.
+    Step 1 (flag-based): scan master-data/master-grid rows and set FOUND for previous day (TODAY-1).
     """
     FOUND = False
-    checked_date = _today_ist_date_key()
+    today_ist = pd.Timestamp.now(tz=ZoneInfo("Asia/Kolkata")).date()
+    checked_date = (today_ist - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
     total_records = 0
     error_message = ""
     data_source = ""
@@ -350,8 +351,12 @@ def send_stakeholder_pending_notification() -> Dict[str, Any]:
     login_user = _get_env_value("SMTP_USERNAME", "SENDER_EMAIL", "MAIL_USERNAME", "EMAIL_USER", default=sender_email)
     email_from = _get_env_value("EMAIL_FROM", "SENDER_EMAIL", "SMTP_USERNAME", "MAIL_FROM", "MAIL_USERNAME", default=sender_email)
 
-    subject = "Daily energy log update is pending"
-    body = "Please update the daily log for the latest date."
+    today_ist = pd.Timestamp.now(tz=ZoneInfo("Asia/Kolkata")).date()
+    previous_day = today_ist - pd.Timedelta(days=1)
+    previous_day_str = previous_day.strftime("%d-%m-%Y")
+    
+    subject = "Update Energy Log"
+    body = f"Good Morning,\n\nPlease update the energy log for {previous_day_str}\n"
     to_list = [STAKEHOLDER_NOTIFICATION_EMAIL]
 
     msg = MIMEMultipart("alternative")
@@ -529,7 +534,10 @@ def _run_data_refresh() -> None:
 
 def initialize_scheduler_from_config() -> None:
     """Initialize scheduler from persisted config when API starts."""
-    # Start data refresh task immediately
+    # Run ingestion pipeline immediately on startup
+    _run_data_refresh()
+    
+    # Schedule data refresh task for periodic updates
     _schedule_data_refresh()
     
     # Start email scheduler if configured

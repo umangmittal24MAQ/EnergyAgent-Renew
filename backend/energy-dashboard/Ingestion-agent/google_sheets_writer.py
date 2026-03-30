@@ -728,102 +728,15 @@ class GoogleSheetsWriter:
             print(f"   [ERROR] Error backfilling inverter columns: {str(e)}")
             return False
     
+    
     def write_all_sheets(self):
-        """Write data to all Google Sheets"""
-        if not self.sheet_service:
-            print("[ERROR] Not authenticated with Google Sheets API")
-            return False
-        
+        """Write data to all Google Sheets - DISABLED, use data_ingestion_agent/google_sheets_writer.py instead"""
         print("\n" + "=" * 70)
-        print("[INFO] WRITING DATA TO GOOGLE SHEETS")
+        print("[INFO] GOOGLE SHEETS WRITING DISABLED IN INGESTION-AGENT")
+        print("[INFO] All Google Sheets writes are now handled by:")
+        print("[INFO] data_ingestion_agent/google_sheets_writer.py")
         print("=" * 70)
-        
-        all_success = True
-        
-        # Write Unified Solar Data
-        print("\n[1] UnifiedSolarData Sheet:")
-        try:
-            data_file = script_dir / SHEETS_CONFIG["unified_solar"]["data_file"]
-            if data_file.exists():
-                with open(data_file, 'r') as f:
-                    data = json.load(f)
-                    success = self.write_unified_solar_data(
-                        SHEETS_CONFIG["unified_solar"]["sheet_id"],
-                        data
-                    )
-                    all_success = all_success and success
-            else:
-                print(f"   [WARN] Data file not found: {data_file}")
-                all_success = False
-        except Exception as e:
-            print(f"   [ERROR] Error: {str(e)}")
-            all_success = False
-        
-        # Write Last 7 Days Data
-        print("\n[2] last_7_days Sheet:")
-        try:
-            data_file = script_dir / SHEETS_CONFIG["last_7_days"]["data_file"]
-            if data_file.exists():
-                with open(data_file, 'r') as f:
-                    data = json.load(f)
-                    success = self.write_last_7_days_data(
-                        SHEETS_CONFIG["last_7_days"]["sheet_id"],
-                        data
-                    )
-                    all_success = all_success and success
-            else:
-                print(f"   [WARN] Data file not found: {data_file}")
-                all_success = False
-        except Exception as e:
-            print(f"   [ERROR] Error: {str(e)}")
-            all_success = False
-        
-        # Write SMB Status Data
-        print("\n[3] SMB_Status Sheet:")
-        try:
-            data_file = script_dir / SHEETS_CONFIG["smb_status"]["data_file"]
-            if data_file.exists():
-                with open(data_file, 'r') as f:
-                    data = json.load(f)
-                    success = self.write_smb_status_data(
-                        SHEETS_CONFIG["smb_status"]["sheet_id"],
-                        data
-                    )
-                    all_success = all_success and success
-            else:
-                print(f"   [WARN] Data file not found: {data_file}")
-                all_success = False
-        except Exception as e:
-            print(f"   [ERROR] Error: {str(e)}")
-            all_success = False
-
-        # Write Grid & Diesel Data
-        print("\n[4] grid_and_diesel Sheet:")
-        try:
-            data_file = script_dir / SHEETS_CONFIG["grid_and_diesel"]["data_file"]
-            if data_file.exists():
-                with open(data_file, 'r') as f:
-                    data = json.load(f)
-                    success = self.write_grid_and_diesel_data(
-                        SHEETS_CONFIG["grid_and_diesel"]["sheet_id"],
-                        data
-                    )
-                    all_success = all_success and success
-            else:
-                print(f"   [WARN] Data file not found: {data_file}")
-                all_success = False
-        except Exception as e:
-            print(f"   [ERROR] Error: {str(e)}")
-            all_success = False
-        
-        print("\n" + "=" * 70)
-        if all_success:
-            print("[OK] All sheets updated successfully!")
-        else:
-            print("[WARN] Some sheets failed to update. Check credentials and data files.")
-        print("=" * 70)
-        
-        return all_success
+        return True
 
 def main():
     """Main entry point"""

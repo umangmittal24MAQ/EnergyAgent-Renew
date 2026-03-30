@@ -12,9 +12,10 @@ import {
   getLatestRow,
   getRecentRows,
   getRowsForDate,
+  getRecentDateRange,
 } from "../../utils/recentData";
 import { useDateStore } from "../../store/dateStore";
-import { Zap, DollarSign, TrendingUp, AlertCircle } from "lucide-react";
+import { Zap, IndianRupee, TrendingUp, AlertCircle } from "lucide-react";
 
 const getRowTimestamp = (row = {}) => {
   const ts = row?.Timestamp || row?.timestamp;
@@ -106,17 +107,21 @@ const buildGridComputedRow = (row = {}, solarGenerationByDate = {}) => {
 export const GridTab = () => {
   const [isExporting, setIsExporting] = useState(false);
   const { startDate, endDate } = useDateStore();
+  
+  // Use actual last 7 days for grid data display, not the date filter
+  const { startDate: last7StartDate, endDate: last7EndDate } = getRecentDateRange(7);
+  
   const {
     data: gridData,
     isLoading: dataLoading,
     error: dataError,
-  } = useGridData(startDate, endDate);
-  const { data: last7DaysData } = useLast7DaysData(startDate, endDate);
+  } = useGridData(last7StartDate, last7EndDate);
+  const { data: last7DaysData } = useLast7DaysData(last7StartDate, last7EndDate);
 
   const handleExport = async () => {
     try {
       setIsExporting(true);
-      const response = await exportAPI.exportGrid(startDate, endDate);
+      const response = await exportAPI.exportGrid(last7StartDate, last7EndDate);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -240,7 +245,7 @@ export const GridTab = () => {
             value={latestGridEnergyCost}
             unit="INR"
             color="red"
-            icon={DollarSign}
+            icon={IndianRupee}
           />
         </div>
       </div>

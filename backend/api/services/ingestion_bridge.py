@@ -77,3 +77,49 @@ def run_inverter_backfill_once() -> bool:
 def get_ingestion_agent_dir() -> Path:
     """Expose the configured Ingestion-agent directory."""
     return INGESTION_AGENT_DIR
+
+
+def get_sharepoint_writer():
+    """Load and return the SharePoint writer module from Ingestion-agent."""
+    try:
+        writer_module = _load_module("ingestion_agent_sharepoint_writer", "sharepoint_writer.py")
+        if not hasattr(writer_module, "SharePointExcelWriter"):
+            raise AttributeError("sharepoint_writer.py does not define SharePointExcelWriter")
+        return writer_module
+    except FileNotFoundError:
+        logger.warning("SharePoint writer not found in Ingestion-agent. SharePoint functionality disabled.")
+        return None
+    except Exception as e:
+        logger.error(f"Failed to load SharePoint writer: {e}")
+        return None
+
+
+def write_to_sharepoint_once(sheet_key: str, data: list) -> bool:
+    """
+    Write data to SharePoint (single operation)
+    
+    Args:
+        sheet_key: Config key for the sheet (e.g., 'unified_solar')
+        data: List of dictionaries to write
+        
+    Returns:
+        True if write successful
+    """
+    try:
+        sharepoint_module = get_sharepoint_writer()
+        if not sharepoint_module:
+            logger.warning("SharePoint writer not available")
+            return False
+        
+        writer = sharepoint_module.get_sharepoint_writer()
+        success = writer.append_data_to_sheet(sheet_key, data)
+        
+        if success:
+            logger.info(f"Successfully wrote {len(data)} rows to SharePoint: {sheet_key}")
+        else:
+            logger.error(f"Failed to write to SharePoint: {sheet_key}")
+        
+        return success
+    except Exception as e:
+        logger.error(f"Exception writing to SharePoint: {e}")
+        return False

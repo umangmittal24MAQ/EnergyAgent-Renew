@@ -51,26 +51,30 @@ async def stop_scheduler():
 
 @router.post("/send-now")
 async def send_email_now():
-    """Send test email immediately"""
-    result = scheduler_service.send_email_now()
-    if result.get("status") == "Failed":
-        raise HTTPException(status_code=500, detail=result.get("notes", "Email send failed"))
+    """Send email immediately with pre-validation (check if TODAY-1 data exists first)"""
+    result = scheduler_service.run_daily_report_automation(trigger_source="manual_frontend_trigger")
+    if result.get("found") is False:
+        raise HTTPException(status_code=400, detail="Today-1 data not found. Notification sent to stakeholder. Retry in 30 minutes.")
+    if result.get("daily_report", {}).get("status") == "Failed":
+        raise HTTPException(status_code=500, detail=result.get("daily_report", {}).get("notes", "Email send failed"))
     return result
 
 
 @router.post("/send-now-frontend")
 async def send_email_now_frontend():
-    """Frontend-specific alias for immediate send using the current scheduler service formatter."""
-    result = scheduler_service.send_email_now()
-    if result.get("status") == "Failed":
-        raise HTTPException(status_code=500, detail=result.get("notes", "Email send failed"))
+    """Frontend send with pre-validation (check if TODAY-1 data exists before sending)"""
+    result = scheduler_service.run_daily_report_automation(trigger_source="manual_frontend_trigger")
+    if result.get("found") is False:
+        raise HTTPException(status_code=400, detail="Today-1 data not found. Notification sent to stakeholder. Retry in 30 minutes.")
+    if result.get("daily_report", {}).get("status") == "Failed":
+        raise HTTPException(status_code=500, detail=result.get("daily_report", {}).get("notes", "Email send failed"))
     return result
 
 
 @router.get("/debug/test-email")
 async def test_email_generation():
-    """Debug endpoint to test email generation"""
-    result = scheduler_service.send_email_now()
+    """Debug endpoint to test email generation with pre-validation"""
+    result = scheduler_service.run_daily_report_automation(trigger_source="debug_test")
     return result
 
 
