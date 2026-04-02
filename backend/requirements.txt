@@ -1,0 +1,12 @@
+"""
+Backend requirements separated from main requirements
+"""
+-r ../requirements.txt
+
+# Additional backend-only dependencies can go here
+# For performance monitoring
+prometheus-client>=0.18.0
+
+# For database ORM (when ready)
+# sqlalchemy>=2.0.0
+# alembic>=1.12.0

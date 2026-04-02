@@ -1,13 +1,138 @@
-# Python cache artifacts
-**/__pycache__/
-**/*.py[cod]
+# ============================================================================
+# ENVIRONMENT & SECRETS
+# ============================================================================
+.env
+.env.local
+.env.*.local
+.secrets/
+credentials/
 
-# Local virtual environments
+# ============================================================================
+# PYTHON
+# ============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+*.cover
+*.py,cover
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ============================================================================
+# FRONTEND / NODE
+# ============================================================================
+node_modules/
+dist/
+*.tsbuildinfo
+.eslintcache
+
+# ============================================================================
+# IDE & EDITORS
+# ============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.pydevproject
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# ============================================================================
+# OS
+# ============================================================================
+Thumbs.db
+
+# ============================================================================
+# LOGS & MONITORING
+# ============================================================================
+logs/
+*.log
+*.log.*
+!logs/.gitkeep
+
+# ============================================================================
+# DATA & CACHE
+# ============================================================================
+data/cache/
+data/exports/
+backend/data/cache/
+backend/data/exports/
+*.db
+*.sqlite
+*.sqlite3
+.cache/
+.vite/
+
+# ============================================================================
+# CREDENTIALS & API KEYS
+# ============================================================================
+*credentials.json
+*token.json
+google_credentials.json
+token.json
+private_key.pem
+*.pem
+*.key
+
+# ============================================================================
+# VIRTUAL ENVIRONMENTS
+# ============================================================================
 .venv/
+venv/
+ENV/
+env/
 backend/api-venv/
 backend/energy-dashboard/venv/
 
-# Generated backend email/debug outputs
+# ============================================================================
+# DOCKER & CONTAINERS
+# ============================================================================
+docker-compose.override.yml
+
+# ============================================================================
+# TEMPORARY & BUILD FILES
+# ============================================================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+# ============================================================================
+# GENERATED OUTPUT FILES
+# ============================================================================
 backend/energy-dashboard/output/*.html
 backend/energy-dashboard/output/*.txt
 backend/energy-dashboard/output/_debug_scheduler_email.html
