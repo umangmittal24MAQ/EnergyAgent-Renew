@@ -1,12 +1,42 @@
-"""
-Backend requirements separated from main requirements
-"""
--r ../requirements.txt
 
+fastapi>=0.104.0
+uvicorn>=0.24.0
+python-multipart>=0.0.6
+gunicorn>=21.0.0  
+pandas>=2.2.0
+openpyxl>=3.1.2
+numpy>=1.24.0
+
+python-dotenv>=1.0.1
+pyyaml>=6.0.1
+
+schedule>=1.2.1
+apscheduler>=3.10.4
+
+msal>=1.35.0
+requests>=2.32.0
+
+# SharePoint
+Office365-REST-Python-Client>=2.6.0
+# Google Sheets
+gspread>=6.0.0
+google-auth-oauthlib>=1.2.0
+
+groq>=0.11.0
+
+jinja2>=3.1.3
+
+# Uncomment when developing locally
+# pytest>=7.4.0
+# pytest-cov>=4.1.0
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
 # Additional backend-only dependencies can go here
 # For performance monitoring
 prometheus-client>=0.18.0
-
 # For database ORM (when ready)
 # sqlalchemy>=2.0.0
 # alembic>=1.12.0

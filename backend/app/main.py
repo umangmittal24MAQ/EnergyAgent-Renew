@@ -73,6 +73,4 @@ def create_app() -> FastAPI:
 def get_app() -> FastAPI:
     """Get the FastAPI application instance"""
     return create_app()
-
-
 app = create_app()

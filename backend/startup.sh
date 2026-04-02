@@ -1,37 +1,27 @@
 #!/bin/bash
-# Startup script for Azure App Service - Python/FastAPI Backend
-# This script runs when the App Service starts
 
-# Set working directory
-cd /home/site/wwwroot
+APP_DIR="/home/site/wwwroot"
+echo "Starting app from: $APP_DIR"
+cd $APP_DIR
 
-# Activate virtual environment (if exists)
-if [ -d "venv" ]; then
-    source venv/bin/activate
-fi
-
-# Install/update dependencies from requirements.txt
+# Install dependencies directly on the Linux container
 echo "Installing dependencies..."
-pip install --no-cache-dir -r requirements.txt
+pip install -r requirements.txt --quiet
 
-# Run migrations if database is configured
-if [ ! -z "$DATABASE_URL" ]; then
-    echo "Database configured, running migrations..."
-    alembic upgrade head || echo "Alembic not configured, skipping migrations"
+# Verify app module exists
+if [ ! -d "app" ]; then
+    echo "ERROR: app directory not found in $APP_DIR"
+    ls -la
+    exit 1
 fi
 
-# Start the application with Gunicorn (production ASGI server)
-echo "Starting FastAPI application..."
+echo "Starting gunicorn..."
 
-# Use Gunicorn for production
-gunicorn \
+# Start gunicorn with Uvicorn worker
+python3 -m gunicorn app.api.main:app \
     --workers 4 \
     --worker-class uvicorn.workers.UvicornWorker \
-    --bind 0.0.0.0:8000 \
+    --bind 0.0.0.0:${PORT:-8000} \
     --timeout 120 \
     --access-logfile - \
-    --error-logfile - \
-    app.api.main:app
-
-# Alternative (if Gunicorn is not preferred):
-# python -m uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --workers 4
+    --error-logfile -

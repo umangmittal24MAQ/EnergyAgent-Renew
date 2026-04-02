@@ -5,21 +5,14 @@ from fastapi import APIRouter, Query
 from typing import Optional
 import pandas as pd
 import numpy as np
-import sys
-from pathlib import Path
 from app.core.config_legacy import GRID_COST_PER_UNIT, DIESEL_COST_PER_UNIT, SOLAR_TARGET_PERCENTAGE
 from app.services.google_sheets_data_service import get_service as get_gs_service
 
 try:
-    from mail_scheduling_agent.emailer import generate_smart_summary
-except ImportError:
-    mail_agent_path = Path(__file__).resolve().parents[2] / "energy-dashboard"
-    if mail_agent_path.exists() and str(mail_agent_path) not in sys.path:
-        sys.path.append(str(mail_agent_path))
-    try:
-        from mail_scheduling_agent.emailer import generate_smart_summary
-    except ImportError:
-        generate_smart_summary = None
+    from app.agents.email.emailer import generate_smart_summary
+except ImportError as e:
+    print(f"Warning: Could not import generate_smart_summary: {e}")
+    generate_smart_summary = None
 
 
 def convert_numpy_types(obj):
