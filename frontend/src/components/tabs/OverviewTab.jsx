@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   useDieselData,
   useGridData,
@@ -13,11 +13,9 @@ import { StackedBarChart } from "../charts/StackedBarChart";
 import { LineChartComponent } from "../charts/LineChart";
 import { DonutChart } from "../charts/DonutChart";
 import { LoadingSpinner } from "../common/LoadingSpinner";
-import { format, subDays } from "date-fns";
+import { format, parseISO, subDays } from "date-fns";
 import {
   asNumber,
-  formatDisplayDate,
-  getRecentRows,
 } from "../../utils/recentData";
 import {
   formatDate,
@@ -528,8 +526,99 @@ const sanitizeInsightWording = (items = []) => {
   return items.map(cleanupText).filter(Boolean);
 };
 
+const extractInsightBullets = (content = "") => {
+  const text = String(content || "").trim();
+  if (!text) return [];
+
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.replace(/^[-*•]\s*/, "").replace(/^\d+[.)]\s*/, ""))
+    .filter(Boolean);
+
+  if (lines.length) {
+    return lines.slice(0, 6);
+  }
+
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+};
+
+const buildSmartInsightsPrompt = (context = {}) => {
+  const payload = {
+    report_date: context.reportDateLabel,
+    insights_target_date: context.previousDateLabel,
+    insights_target_date_key: context.previousDateKey,
+    previous_day_metrics: {
+      grid_energy_kwh: Number(context.gridKwh.toFixed(2)),
+      solar_energy_kwh: Number(context.solarKwh.toFixed(2)),
+      total_energy_kwh: Number(context.totalKwh.toFixed(2)),
+      total_energy_cost_inr: Number(context.totalCostInr.toFixed(2)),
+      cost_savings_inr: Number(context.savingsInr.toFixed(2)),
+      solar_self_sufficiency_pct: Number(context.solarSelfSufficiencyPct.toFixed(2)),
+    },
+    anomalies: {
+      zero_consumption_days_in_last_30: context.zeroConsumptionDays,
+      unusually_high_grid_draw_days: context.highGridDrawDays,
+      inverter_faults_on_target_day: context.inverterFaults,
+      issue_notes: context.issueNotes,
+    },
+  };
+
+  return [
+    "You are an enterprise energy analyst for a campus facility manager.",
+    "Generate exactly 4 to 6 concise, actionable bullet points.",
+    `Important: Analyze ONLY the previous day's data for ${context.previousDateLabel} (${context.previousDateKey}), derived from report date ${context.reportDateLabel}.`,
+    "Do not mention 'today' or current date.",
+    "Cover all of these: grid vs solar, cost and savings, solar self-sufficiency ratio, anomalies (zero days/high grid/inverter faults), and one recommended action.",
+    "Avoid generic statements. Use the numbers from the input facts.",
+    "Return bullets only.",
+    `Facts: ${JSON.stringify(payload)}`,
+  ].join("\n");
+};
+
+const buildFallbackInsights = (context = {}) => {
+  const gridSharePct =
+    context.totalKwh > 0 ? (context.gridKwh / context.totalKwh) * 100 : 0;
+
+  const highGridSummary =
+    context.highGridDrawDays.length > 0
+      ? `High grid draw detected on ${context.highGridDrawDays.join(", ")}; investigate HVAC or demand spikes during those days.`
+      : "No unusually high grid draw was detected in the last 30 days window.";
+
+  const zeroSummary =
+    context.zeroConsumptionDays > 0
+      ? `${context.zeroConsumptionDays} zero-consumption day(s) were found in the 30-day trend; validate meter continuity and data logging completeness.`
+      : "No zero-consumption days were observed in the last 30 days, indicating stable data capture.";
+
+  const inverterSummary =
+    context.inverterFaults.length > 0
+      ? `Inverter fault risk on ${context.previousDateLabel}: ${context.inverterFaults.join(", ")}. Prioritize diagnostics before the next reporting cycle.`
+      : `No inverter faults were detected for ${context.previousDateLabel}.`;
+
+  const recommendation =
+    gridSharePct >= 70
+      ? "Action: Reduce grid dependency by shifting discretionary loads to high solar-generation hours and validate inverter dispatch settings."
+      : "Action: Maintain current source mix and track recurring cost outliers to sustain solar-driven savings.";
+
+  return [
+    `On ${context.previousDateLabel}, grid supplied ${safeNumeric(context.gridKwh, 1)} kWh versus solar generation of ${safeNumeric(context.solarKwh, 1)} kWh (solar self-sufficiency ${safeNumeric(context.solarSelfSufficiencyPct, 1)}%).`,
+    `Total energy cost was ₹${safeNumeric(context.totalCostInr, 0)}, with estimated savings of ₹${safeNumeric(context.savingsInr, 0)} from solar contribution.`,
+    zeroSummary,
+    highGridSummary,
+    inverterSummary,
+    recommendation,
+  ];
+};
+
 export const OverviewTab = () => {
   const [isExporting, setIsExporting] = useState(false);
+  const [llmInsights, setLlmInsights] = useState([]);
+  const [isGeneratingInsights, setIsGeneratingInsights] = useState(false);
   const { startDate, endDate } = useDateStore();
 
   const reportEndDate = subDays(new Date(), 1);
@@ -539,9 +628,9 @@ export const OverviewTab = () => {
   const reportDateLabel = formatDate(reportEndDate);
 
   const {
-    data: kpiData,
+    data: _kpiData,
     isLoading: kpiLoading,
-    error: kpiError,
+    error: _kpiError,
   } = useOverviewKPIs(reportEndDateKey, reportEndDateKey);
 
   const {
@@ -567,6 +656,16 @@ export const OverviewTab = () => {
   } = useUnifiedData(reportStartDateKey, reportEndDateKey);
 
   const reportRows = normalizeOverviewReportRows(unifiedReportData?.data || []);
+
+  const previousInsightsDateKey = useMemo(() => {
+    const parsed = parseISO(reportEndDateKey);
+    return format(subDays(parsed, 1), "yyyy-MM-dd");
+  }, [reportEndDateKey]);
+
+  const previousInsightsDateLabel = useMemo(
+    () => formatDate(previousInsightsDateKey),
+    [previousInsightsDateKey],
+  );
 
   const handleExport = async () => {
     try {
@@ -651,13 +750,6 @@ export const OverviewTab = () => {
     );
   }
 
-  // Get yesterday's date (previous day) for KPI calculations
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayDate = yesterday.toISOString().split("T")[0]; // Format: YYYY-MM-DD
-
-  const effectiveDate = yesterdayDate;
-
   // Use 30-day reportRows data (same as the chart above) for accurate source mix calculation
   const totalGridEnergy = reportRows.reduce(
     (sum, row) => sum + asFiniteNumber(row?.["Grid Units Consumed (kWh)"], 0),
@@ -720,24 +812,173 @@ export const OverviewTab = () => {
       ? (latestSolarEnergyGenerated / latestTotalEnergyConsumed) * 100
       : 0;
 
-  const insightCards = [
-    {
-      title: "Best Source Mix",
-      text: `${(sourceMixData[1]?.value || 0).toFixed(1)}% from solar keeps operating costs stable.`,
-      icon: ShieldCheck,
-      accent: "text-[#4f8d7d]",
-    },
-    {
-      title: "Cost Exposure",
-      text: `Diesel share is ${(sourceMixData[2]?.value || 0).toFixed(1)}%. Lowering it improves margin resilience.`,
-      icon: IndianRupee,
-      accent: "text-[#3f6894]",
-    },
-  ];
+  const insightsContext = useMemo(() => {
+    const previousDayRecord =
+      reportRows.find((row) => row.__dateKey === previousInsightsDateKey) ||
+      reportRows.find((row) => row.__dateKey < reportEndDateKey) ||
+      reportRows[0] ||
+      null;
 
-  const smartInsights = Array.isArray(kpiData?.insights)
-    ? sanitizeInsightWording(kpiData.insights)
-    : [];
+    const gridKwh = asFiniteNumber(
+      previousDayRecord?.["Grid Units Consumed (kWh)"],
+      0,
+    );
+    const solarKwh = asFiniteNumber(
+      previousDayRecord?.["Solar Units Consumed (kWh)"],
+      0,
+    );
+    const totalKwh = asFiniteNumber(
+      previousDayRecord?.["Total Units Consumed (kWh)"],
+      gridKwh + solarKwh,
+    );
+    const totalCostInr = asFiniteNumber(previousDayRecord?.["Total Cost (INR)"], 0);
+    const savingsInr = asFiniteNumber(previousDayRecord?.["Solar Cost Savings (INR)"], 0);
+    const solarSelfSufficiencyPct =
+      totalKwh > 0 ? (solarKwh / totalKwh) * 100 : 0;
+
+    const zeroConsumptionDays = reportRows.filter(
+      (row) => asFiniteNumber(row?.["Total Units Consumed (kWh)"], 0) <= 0,
+    ).length;
+
+    const averageGridDraw =
+      reportRows.length > 0
+        ? reportRows.reduce(
+            (sum, row) =>
+              sum + asFiniteNumber(row?.["Grid Units Consumed (kWh)"], 0),
+            0,
+          ) / reportRows.length
+        : 0;
+
+    const highGridThreshold = averageGridDraw * 1.35;
+    const highGridDrawDays = reportRows
+      .filter(
+        (row) =>
+          asFiniteNumber(row?.["Grid Units Consumed (kWh)"], 0) >
+          highGridThreshold,
+      )
+      .slice(0, 3)
+      .map((row) => formatDate(row?.__dateKey || row?.Date));
+
+    const inverterFaults = INVERTER_COLUMN_KEYS.filter(
+      (key) => asFiniteNumber(previousDayRecord?.[key]?.downtime, 0) > 0.1,
+    ).map((key) => `Inverter ${key.replace("inv", "")}`);
+
+    const issueNotes = normalizeIssueText(previousDayRecord?.Issues);
+
+    return {
+      reportDateLabel,
+      previousDateLabel: previousInsightsDateLabel,
+      previousDateKey: previousInsightsDateKey,
+      gridKwh,
+      solarKwh,
+      totalKwh,
+      totalCostInr,
+      savingsInr,
+      solarSelfSufficiencyPct,
+      zeroConsumptionDays,
+      highGridDrawDays,
+      inverterFaults,
+      issueNotes,
+    };
+  }, [
+    reportRows,
+    previousInsightsDateKey,
+    previousInsightsDateLabel,
+    reportDateLabel,
+    reportEndDateKey,
+  ]);
+
+  const fallbackInsights = useMemo(
+    () => sanitizeInsightWording(buildFallbackInsights(insightsContext)).slice(0, 6),
+    [insightsContext],
+  );
+
+  const insightsPrompt = useMemo(
+    () => buildSmartInsightsPrompt(insightsContext),
+    [insightsContext],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    const generateInsights = async () => {
+      if (!reportRows.length) {
+        setLlmInsights([]);
+        return;
+      }
+
+      const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+      const model = import.meta.env.VITE_GROQ_MODEL || "llama3-70b-8192";
+
+      if (!apiKey) {
+        setLlmInsights([]);
+        return;
+      }
+
+      setIsGeneratingInsights(true);
+      try {
+        const response = await fetch(
+          "https://api.groq.com/openai/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model,
+              temperature: 0.2,
+              max_tokens: 380,
+              messages: [
+                {
+                  role: "system",
+                  content:
+                    "You produce concise enterprise energy insights for operations teams.",
+                },
+                {
+                  role: "user",
+                  content: insightsPrompt,
+                },
+              ],
+            }),
+            signal: controller.signal,
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`Groq API request failed with status ${response.status}`);
+        }
+
+        const payload = await response.json();
+        const content = payload?.choices?.[0]?.message?.content || "";
+        const parsed = sanitizeInsightWording(extractInsightBullets(content)).slice(0, 6);
+        if (!cancelled) {
+          setLlmInsights(parsed.length >= 4 ? parsed : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLlmInsights([]);
+        }
+        if (error?.name !== "AbortError") {
+          console.error("Failed to generate smart insights:", error);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsGeneratingInsights(false);
+        }
+      }
+    };
+
+    generateInsights();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [reportRows, insightsPrompt]);
+
+  const smartInsights = llmInsights.length >= 4 ? llmInsights : fallbackInsights;
 
   return (
     <div className="space-y-6">
@@ -801,6 +1042,10 @@ export const OverviewTab = () => {
               AI Generated
             </span>
           </div>
+          <p className="mb-2 text-xs text-slate-500">
+            Insights target date: {previousInsightsDateLabel}
+            {isGeneratingInsights ? " • refreshing" : ""}
+          </p>
           {smartInsights.length > 0 ? (
             <ul className="list-disc list-inside space-y-1.5">
               {smartInsights.map((item, idx) => (
@@ -812,18 +1057,7 @@ export const OverviewTab = () => {
                 </li>
               ))}
             </ul>
-          ) : (
-            <ul className="list-disc list-inside space-y-1.5">
-              {insightCards.map((item, idx) => (
-                <li
-                  key={`fallback-insight-${idx}`}
-                  className="text-sm text-slate-600 leading-snug"
-                >
-                  {item.text}
-                </li>
-              ))}
-            </ul>
-          )}
+          ) : null}
         </div>
       </div>
 

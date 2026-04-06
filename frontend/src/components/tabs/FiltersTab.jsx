@@ -108,27 +108,27 @@ export const FiltersTab = () => {
 
   return (
     <div className="space-y-6 fade-in-up">
-      <div className="surface-card rounded-2xl p-6">
-        <h2 className="text-2xl font-bold section-title mb-2 flex items-center gap-2">
-          <SlidersHorizontal className="text-[var(--accent-500)]" size={24} />
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-slate-800">
+          <SlidersHorizontal className="text-slate-400" size={18} />
           Date Filters Workspace
         </h2>
-        <p className="text-[var(--text-muted)]">
+        <p className="text-sm text-slate-500">
           Configure reporting windows and apply reusable filter presets across
           the dashboard.
         </p>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 surface-card rounded-2xl p-6">
-          <h3 className="text-lg font-semibold section-title mb-4 flex items-center gap-2">
-            <CalendarRange className="text-[var(--accent-500)]" size={20} />
+        <div className="xl:col-span-2 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-800">
+            <CalendarRange className="text-slate-400" size={18} />
             Primary Date Window
           </h3>
           <DateRangeFilter />
 
           <div className="mt-5">
-            <p className="text-xs uppercase tracking-wide text-[var(--text-muted)] mb-2">
+            <p className="text-xs uppercase tracking-wide text-(--text-muted) mb-2">
               Quick Presets
             </p>
             <div className="flex flex-wrap gap-2">
@@ -137,7 +137,7 @@ export const FiltersTab = () => {
                   key={preset.id}
                   type="button"
                   onClick={() => applyPreset(preset)}
-                  className="px-4 py-2 rounded-xl border border-[var(--surface-border)] bg-[var(--surface-soft)] text-[var(--text-primary)] font-semibold text-sm hover:bg-[var(--accent-100)] transition-colors"
+                  className="px-4 py-2 rounded-xl border border-(--surface-border) bg-(--surface-soft) text-(--text-primary) font-semibold text-sm hover:bg-(--accent-100) transition-colors"
                 >
                   {preset.label}
                 </button>
@@ -146,8 +146,8 @@ export const FiltersTab = () => {
           </div>
         </div>
 
-        <div className="surface-card rounded-2xl p-6">
-          <h3 className="text-lg font-semibold section-title mb-4">
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 text-base font-semibold text-slate-800">
             Filter Intelligence
           </h3>
           <div
@@ -170,30 +170,30 @@ export const FiltersTab = () => {
             <button
               type="button"
               onClick={() => setIsCompareEnabled((state) => !state)}
-              className="w-full flex items-center justify-between rounded-xl border border-[var(--surface-border)] px-4 py-3 bg-[var(--surface-soft)] hover:bg-[var(--accent-100)] transition-colors"
+              className="w-full flex items-center justify-between rounded-xl border border-(--surface-border) px-4 py-3 bg-(--surface-soft) hover:bg-(--accent-100) transition-colors"
             >
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
+              <span className="text-sm font-semibold text-(--text-primary)">
                 Compare With Previous Period
               </span>
               {isCompareEnabled ? (
-                <ToggleRight className="text-[var(--accent-500)]" size={20} />
+                <ToggleRight className="text-(--accent-500)" size={20} />
               ) : (
-                <ToggleLeft className="text-[var(--text-muted)]" size={20} />
+                <ToggleLeft className="text-(--text-muted)" size={20} />
               )}
             </button>
 
             <button
               type="button"
               onClick={() => setIsPinned((state) => !state)}
-              className="w-full flex items-center justify-between rounded-xl border border-[var(--surface-border)] px-4 py-3 bg-[var(--surface-soft)] hover:bg-[var(--accent-100)] transition-colors"
+              className="w-full flex items-center justify-between rounded-xl border border-(--surface-border) px-4 py-3 bg-(--surface-soft) hover:bg-(--accent-100) transition-colors"
             >
-              <span className="text-sm font-semibold text-[var(--text-primary)]">
+              <span className="text-sm font-semibold text-(--text-primary)">
                 Pin Filters For This Session
               </span>
               {isPinned ? (
-                <Pin className="text-[var(--accent-500)]" size={18} />
+                <Pin className="text-(--accent-500)" size={18} />
               ) : (
-                <PinOff className="text-[var(--text-muted)]" size={18} />
+                <PinOff className="text-(--text-muted)" size={18} />
               )}
             </button>
           </div>

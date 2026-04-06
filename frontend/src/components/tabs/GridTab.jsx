@@ -14,8 +14,8 @@ import {
   getRowsForDate,
   getRecentDateRange,
 } from "../../utils/recentData";
-import { useDateStore } from "../../store/dateStore";
 import { Zap, IndianRupee, TrendingUp, AlertCircle } from "lucide-react";
+import { getTabDisplayRange } from "../../config/tabDisplayRange";
 
 const getRowTimestamp = (row = {}) => {
   const ts = row?.Timestamp || row?.timestamp;
@@ -106,22 +106,30 @@ const buildGridComputedRow = (row = {}, solarGenerationByDate = {}) => {
 
 export const GridTab = () => {
   const [isExporting, setIsExporting] = useState(false);
-  const { startDate, endDate } = useDateStore();
-  
-  // Use actual last 7 days for grid data display, not the date filter
-  const { startDate: last7StartDate, endDate: last7EndDate } = getRecentDateRange(7);
+  const gridDisplayDays = getTabDisplayRange("grid", 30);
+
+  const {
+    startDate: gridDisplayStartDate,
+    endDate: gridDisplayEndDate,
+  } = getRecentDateRange(gridDisplayDays);
   
   const {
     data: gridData,
     isLoading: dataLoading,
     error: dataError,
-  } = useGridData(last7StartDate, last7EndDate);
-  const { data: last7DaysData } = useLast7DaysData(last7StartDate, last7EndDate);
+  } = useGridData(gridDisplayStartDate, gridDisplayEndDate);
+  const { data: last7DaysData } = useLast7DaysData(
+    gridDisplayStartDate,
+    gridDisplayEndDate,
+  );
 
   const handleExport = async () => {
     try {
       setIsExporting(true);
-      const response = await exportAPI.exportGrid(last7StartDate, last7EndDate);
+      const response = await exportAPI.exportGrid(
+        gridDisplayStartDate,
+        gridDisplayEndDate,
+      );
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -148,16 +156,19 @@ export const GridTab = () => {
     return (
       <div className="text-center py-12">
         <AlertCircle
-          className="mx-auto text-[var(--danger-600)] mb-3"
+          className="mx-auto text-(--danger-600) mb-3"
           size={32}
         />
-        <p className="text-[var(--danger-600)] text-lg">Error loading data</p>
+        <p className="text-(--danger-600) text-lg">Error loading data</p>
       </div>
     );
   }
 
-  const recentGridRows = getLastEntryPerDay(getRecentRows(gridData?.data || [], 7), 7);
-  const recentSolarRows = getRecentRows(last7DaysData?.data || [], 7);
+  const recentGridRows = getLastEntryPerDay(
+    getRecentRows(gridData?.data || [], gridDisplayDays),
+    gridDisplayDays,
+  );
+  const recentSolarRows = getRecentRows(last7DaysData?.data || [], gridDisplayDays);
   const solarGenerationByDate = recentSolarRows.reduce((acc, row) => {
     const dateKey = toDateKey(row);
     if (!dateKey) return acc;
@@ -211,12 +222,13 @@ export const GridTab = () => {
     })) || [];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold section-title mb-4">
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-800">
+          <TrendingUp className="text-slate-400" size={18} />
           Key Metrics for Today
         </h2>
-        <p className="text-sm text-[var(--text-muted)] mb-4">
+        <p className="mb-4 text-xs text-slate-400">
           Date: {formatDisplayDate(effectiveDate)}
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -252,15 +264,15 @@ export const GridTab = () => {
 
       <StackedBarChart
         data={chartData}
-        title="Grid Energy Consumption (Last 7 Days)"
+        title="Grid Energy Consumption (Last 30 Days)"
         dataKeys={["Grid Energy Consumed (kWh)", "Total Energy Consumed (kWh)"]}
-        colors={["#496e97", "#6e8093"]}
+        colors={["#3f6894", "#7a95b5"]}
       />
 
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold section-title">
-            Detailed Grid Data (Last 7 Days)
+          <h2 className="text-base font-semibold text-slate-800">
+            Detailed Grid Data (Last 30 Days)
           </h2>
           <ExportButton
             onClick={handleExport}

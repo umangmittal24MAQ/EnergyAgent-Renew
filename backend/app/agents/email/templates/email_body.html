@@ -49,10 +49,18 @@
               </td>
             </tr>
 
+            <tr>
+              <td style="padding: 16px 24px 12px 24px; font-size: 15px; color: #1f2937">
+                Hello,<br /><br />
+                Below is the Energy Consumption Report for {{ report_date_display }}.
+              </td>
+            </tr>
+
             {% if include.get('executive_summary', True) %}
+            <!-- HIDDEN FOR NOW - DO NOT REMOVE -->
             <!-- Executive Summary -->
             <tr>
-              <td style="padding: 14px 24px 8px 24px">
+              <td style="display: none; padding: 14px 24px 8px 24px">
                 <div
                   style="
                     font-size: 12px;
@@ -67,9 +75,10 @@
               </td>
             </tr>
             {% endif %} {% if include.get('summary_kpis', True) %}
+            <!-- HIDDEN FOR NOW - DO NOT REMOVE -->
             <!-- KPI Cards -->
             <tr>
-              <td style="padding: 20px 24px">
+              <td style="display: none; padding: 20px 24px">
                 <div
                   style="
                     font-size: 11px;
@@ -237,9 +246,10 @@
               </td>
             </tr>
             {% endif %} {% if include.get('inverter_status', True) %}
+            <!-- HIDDEN FOR NOW - DO NOT REMOVE -->
             <!-- Inverter Status -->
             <tr>
-              <td style="padding: 8px 24px 4px 24px">
+              <td style="display: none; padding: 8px 24px 4px 24px">
                 <div
                   style="
                     font-size: 12px;
@@ -256,7 +266,9 @@
               </td>
             </tr>
             <tr>
-              <td style="padding: 0 24px 20px 24px">
+              <td style="display: none; padding: 0 24px 20px 24px">
+                <!-- HIDDEN FOR NOW - DO NOT REMOVE -->
+                <!-- SMB Status section -->
                 {{ inverter_table_html }}
               </td>
             </tr>

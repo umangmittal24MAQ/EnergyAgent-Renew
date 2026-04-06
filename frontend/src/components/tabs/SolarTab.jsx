@@ -16,10 +16,10 @@ import {
   asNumber,
   formatDisplayDate,
   getLatestRow,
+  getRecentDateRange,
   getRecentRows,
   getRowsForDate,
 } from "../../utils/recentData";
-import { useDateStore } from "../../store/dateStore";
 import {
   Sun,
   IndianRupee,
@@ -27,6 +27,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from "lucide-react";
+import { getTabDisplayRange } from "../../config/tabDisplayRange";
 
 const InverterStatus = ({ name, status }) => {
   const normalized = String(status || "").toUpperCase();
@@ -41,10 +42,10 @@ const InverterStatus = ({ name, status }) => {
     >
       <div className="flex items-center gap-3">
         <div
-          className={`w-2 h-6 rounded-full ${isOnline ? "bg-gradient-to-b from-[#6fa791] to-[#437c65]" : "bg-gradient-to-b from-[#c17a86] to-[#9f5060]"}`}
+          className={`w-2 h-6 rounded-full ${isOnline ? "bg-linear-to-b from-[#6fa791] to-[#437c65]" : "bg-linear-to-b from-[#c17a86] to-[#9f5060]"}`}
         ></div>
         <div>
-          <p className="font-semibold text-sm text-[var(--text-primary)]">
+          <p className="font-semibold text-sm text-(--text-primary)">
             {name}
           </p>
           <p
@@ -125,20 +126,31 @@ const collapseToAccumulatedDailyRows = (rows = []) => {
 
 export const SolarTab = () => {
   const [isExporting, setIsExporting] = useState(false);
-  const { startDate, endDate } = useDateStore();
+  const solarDisplayDays = getTabDisplayRange("solar", 30);
+  const {
+    startDate: solarDisplayStartDate,
+    endDate: solarDisplayEndDate,
+  } = getRecentDateRange(solarDisplayDays);
+
   const {
     data: solarData,
     isLoading: dataLoading,
     error: dataError,
-  } = useSolarData(startDate, endDate);
-  const { data: last7DaysData } = useLast7DaysData(startDate, endDate);
+  } = useSolarData(solarDisplayStartDate, solarDisplayEndDate);
+  const { data: last7DaysData } = useLast7DaysData(
+    solarDisplayStartDate,
+    solarDisplayEndDate,
+  );
   const { data: smbStatusData } = useSmbStatusData();
   const { data: inverterStatusData } = useInverterStatusData();
 
   const handleExport = async () => {
     try {
       setIsExporting(true);
-      const response = await exportAPI.exportSolar(startDate, endDate);
+      const response = await exportAPI.exportSolar(
+        solarDisplayStartDate,
+        solarDisplayEndDate,
+      );
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -165,17 +177,17 @@ export const SolarTab = () => {
     return (
       <div className="text-center py-12">
         <AlertCircle
-          className="mx-auto text-[var(--danger-600)] mb-3"
+          className="mx-auto text-(--danger-600) mb-3"
           size={32}
         />
-        <p className="text-[var(--danger-600)] text-lg">Error loading data</p>
+        <p className="text-(--danger-600) text-lg">Error loading data</p>
       </div>
     );
   }
 
-  const recentSolarRows = getRecentRows(solarData?.data || [], 7);
+  const recentSolarRows = getRecentRows(solarData?.data || [], solarDisplayDays);
   const readableLast7Rows = collapseToAccumulatedDailyRows(
-    getRecentRows(last7DaysData?.data || [], 7),
+    getRecentRows(last7DaysData?.data || [], solarDisplayDays),
   );
   const latestSolarRecord = getLatestRow(recentSolarRows);
   const effectiveDate = latestSolarRecord?.Date || latestSolarRecord?.Timestamp;
@@ -210,22 +222,6 @@ export const SolarTab = () => {
     return !["ONLINE", "ON", "ACTIVE", "RUNNING", "HEALTHY", "OK"].includes(normalized);
   }).length;
 
-  const smbChartData =
-    recentSolarRows?.map((item) => ({
-      Date: item.Date,
-      "Solar Energy Generated (kWh)":
-        asNumber(item, [
-          "Solar Units Generated (KWh)",
-          "Solar KWh",
-          "Day_Generation_kWh",
-        ]),
-      "SMB1 Energy Generated (kWh)": asNumber(item, ["SMB1 (KWh)", "SMB1 (kW)"]),
-      "SMB2 Energy Generated (kWh)": asNumber(item, ["SMB2 (KWh)", "SMB2 (kW)"]),
-      "SMB3 Energy Generated (kWh)": asNumber(item, ["SMB3 (KWh)", "SMB3 (kW)"]),
-      "SMB4 Energy Generated (kWh)": asNumber(item, ["SMB4 (KWh)", "SMB4 (kW)"]),
-      "SMB5 Energy Generated (kWh)": asNumber(item, ["SMB5 (KWh)", "SMB5 (kW)"]),
-    })) || [];
-
   const weeklyTrendData =
     readableLast7Rows?.map((item) => ({
       Date: item?.Date,
@@ -243,15 +239,16 @@ export const SolarTab = () => {
   }));
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold section-title mb-4">
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-800">
+          <Sun className="text-slate-400" size={18} />
           Key Metrics for Today
         </h2>
-        <p className="text-sm text-[var(--text-muted)] mb-5">
+        <p className="mb-4 text-xs text-slate-400">
           Date: {formatDisplayDate(effectiveDate)}
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <KPICard
             title="Solar Energy Generated"
             value={latestSolarEnergyGenerated}
@@ -276,12 +273,12 @@ export const SolarTab = () => {
         </div>
       </div>
 
-      <div className="surface-card rounded-2xl p-8">
-        <h2 className="text-2xl font-bold section-title mb-5 flex items-center gap-2">
-          <Zap className="text-[var(--accent-500)]" size={28} />
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-800">
+          <Zap className="text-slate-400" size={18} />
           SMB Status
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
           {smbStatuses.map((inverter, idx) => (
             <InverterStatus
               key={idx}
@@ -292,12 +289,12 @@ export const SolarTab = () => {
         </div>
       </div>
 
-      <div className="surface-card rounded-2xl p-8">
-        <h2 className="text-2xl font-bold section-title mb-5 flex items-center gap-2">
-          <Zap className="text-[var(--accent-500)]" size={28} />
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-800">
+          <Zap className="text-slate-400" size={18} />
           Inverter Status
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
           {(inverterStatuses.length ? inverterStatuses : [
             { name: "INV_1", status: "UNKNOWN" },
             { name: "INV_2", status: "UNKNOWN" },
@@ -317,16 +314,16 @@ export const SolarTab = () => {
       <div className="w-full">
         <AreaChartComponent
           data={weeklyTrendData}
-          title="Solar Energy Generation Trend (Last 7 Days)"
+          title="Solar Energy Generation (Last 30 Days)"
           dataKeys={["Solar Energy Generated (KWh)"]}
-          colors={["#8f7a58"]}
+          colors={["#4f8d7d"]}
         />
       </div>
 
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold section-title">
-            Detailed Solar Data (Last 7 Days)
+          <h2 className="text-base font-semibold text-slate-800">
+            Detailed Solar Data (Last 30 Days)
           </h2>
           <ExportButton
             onClick={handleExport}

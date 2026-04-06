@@ -18,8 +18,8 @@ export const AreaChartComponent = ({
   xDataKey = "Date",
 }) => {
   return (
-    <div className="surface-card rounded-2xl p-6">
-      <h3 className="text-xl font-bold section-title mb-6">{title}</h3>
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <h3 className="mb-3 text-sm font-semibold text-slate-700">{title}</h3>
       <ResponsiveContainer width="100%" height={350}>
         <AreaChart
           data={data}
@@ -40,28 +40,27 @@ export const AreaChartComponent = ({
               </linearGradient>
             ))}
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-border)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
           <XAxis
             dataKey={xDataKey}
-            stroke="var(--text-muted)"
-            style={{ fontSize: "12px" }}
+            stroke="#94a3b8"
+            style={{ fontSize: "11px" }}
           />
-          <YAxis stroke="var(--text-muted)" style={{ fontSize: "12px" }} />
+          <YAxis stroke="#94a3b8" style={{ fontSize: "11px" }} />
           <Tooltip
             contentStyle={{
-              backgroundColor: "var(--surface)",
-              border: "1px solid var(--surface-border)",
-              borderRadius: "12px",
-              boxShadow: "var(--shadow)",
+              backgroundColor: "#ffffff",
+              border: "1px solid #e2e8f0",
+              borderRadius: "10px",
+              boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
             }}
-            labelStyle={{ color: "var(--text-primary)" }}
+            labelStyle={{ color: "#0f172a", fontSize: "12px" }}
             formatter={(value) =>
               value.toLocaleString("en-IN", { maximumFractionDigits: 2 })
             }
           />
           <Legend
-            wrapperStyle={{ paddingTop: "20px" }}
-            contentStyle={{ color: "var(--text-muted)" }}
+            wrapperStyle={{ paddingTop: "8px", color: "#64748b", fontSize: "12px" }}
           />
           {dataKeys.map((key, idx) => (
             <Area

@@ -173,11 +173,11 @@ export const SchedulerTab = () => {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Message Alert */}
       {message && (
         <div
-          className={`rounded-2xl p-4 flex items-start gap-3 border ${
+          className={`rounded-xl p-4 flex items-start gap-3 border shadow-sm ${
             messageType === "success"
               ? "bg-[#edf5f2] border-[#c0d8d0]"
               : "bg-[#f8eff1] border-[#debec4]"
@@ -185,12 +185,12 @@ export const SchedulerTab = () => {
         >
           {messageType === "success" ? (
             <CheckCircle
-              className="text-[#346f5a] mt-0.5 flex-shrink-0"
+              className="text-[#346f5a] mt-0.5 shrink-0"
               size={20}
             />
           ) : (
             <AlertCircle
-              className="text-[#924857] mt-0.5 flex-shrink-0"
+              className="text-[#924857] mt-0.5 shrink-0"
               size={20}
             />
           )}
@@ -208,13 +208,13 @@ export const SchedulerTab = () => {
 
       {/* Scheduler Status Cards */}
       <div>
-        <h2 className="text-2xl font-bold section-title mb-4 flex items-center gap-2">
-          <Clock className="text-[var(--accent-500)]" size={28} />
+        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-slate-800">
+          <Clock className="text-slate-400" size={18} />
           Scheduler Status
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="surface-card rounded-2xl p-6">
-            <p className="text-[var(--text-muted)] text-sm uppercase tracking-wide mb-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-(--text-muted) text-sm uppercase tracking-wide mb-2">
               Status
             </p>
             <div className="flex items-center gap-3 mt-3">
@@ -222,29 +222,29 @@ export const SchedulerTab = () => {
                 className={`w-3 h-3 rounded-full ${status?.status === "running" ? "bg-green-500 animate-pulse" : "bg-gray-500"}`}
               ></div>
               <p
-                className={`text-3xl font-bold ${status?.status === "running" ? "text-[#346f5a]" : "text-[var(--text-muted)]"}`}
+                className={`text-3xl font-bold ${status?.status === "running" ? "text-[#346f5a]" : "text-(--text-muted)"}`}
               >
                 {status?.status === "running" ? "Running" : "Stopped"}
               </p>
             </div>
           </div>
 
-          <div className="surface-card rounded-2xl p-6">
-            <p className="text-[var(--text-muted)] text-sm uppercase tracking-wide mb-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-(--text-muted) text-sm uppercase tracking-wide mb-2">
               Next Run
             </p>
-            <p className="text-lg font-semibold text-[var(--text-primary)] mt-3">
+            <p className="text-lg font-semibold text-(--text-primary) mt-3">
               {status?.next_run
                 ? new Date(status.next_run).toLocaleString("en-IN")
                 : "Not scheduled"}
             </p>
           </div>
 
-          <div className="surface-card rounded-2xl p-6">
-            <p className="text-[var(--text-muted)] text-sm uppercase tracking-wide mb-2">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p className="text-(--text-muted) text-sm uppercase tracking-wide mb-2">
               Last Run
             </p>
-            <p className="text-lg font-semibold text-[var(--text-primary)] mt-3">
+            <p className="text-lg font-semibold text-(--text-primary) mt-3">
               {status?.last_run?.timestamp
                 ? new Date(status.last_run.timestamp).toLocaleString("en-IN")
                 : "Never"}
@@ -256,9 +256,9 @@ export const SchedulerTab = () => {
       {/* Configuration Form */}
       <form
         onSubmit={handleSubmit(onSubmitConfig)}
-        className="surface-card rounded-2xl p-8"
+        className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       >
-        <h2 className="text-2xl font-bold section-title mb-6">
+        <h2 className="mb-4 text-base font-semibold text-slate-800">
           Email Configuration
         </h2>
 
@@ -336,8 +336,8 @@ export const SchedulerTab = () => {
       </form>
 
       {/* Template Upload */}
-      <div className="surface-card rounded-2xl p-8">
-        <h2 className="text-2xl font-bold section-title mb-4">
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-4 text-base font-semibold text-slate-800">
           Custom Excel Template
         </h2>
         <div className="flex items-center gap-4 flex-wrap">
@@ -352,15 +352,15 @@ export const SchedulerTab = () => {
               className="hidden"
             />
           </label>
-          <p className="text-sm text-[var(--text-muted)]">
+          <p className="text-sm text-(--text-muted)">
             Upload a custom Excel template for email attachments
           </p>
         </div>
       </div>
 
       {/* Scheduler Controls */}
-      <div className="surface-card rounded-2xl p-8">
-        <h2 className="text-2xl font-bold section-title mb-6">Controls</h2>
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-4 text-base font-semibold text-slate-800">Controls</h2>
         <div className="flex gap-3 flex-wrap">
           <button
             onClick={handleStart}
@@ -405,12 +405,12 @@ export const SchedulerTab = () => {
 
       {/* Send History */}
       <div>
-        <h2 className="text-2xl font-bold section-title mb-4">Send History</h2>
+        <h2 className="text-base font-semibold text-slate-800 mb-4">Send History</h2>
         {history.length > 0 ? (
           <DataTable data={history} hideColumns={[]} />
         ) : (
-          <div className="surface-card rounded-2xl p-12 text-center">
-            <p className="text-[var(--text-muted)] text-lg">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm text-center">
+            <p className="text-(--text-muted) text-lg">
               No send history yet
             </p>
           </div>
